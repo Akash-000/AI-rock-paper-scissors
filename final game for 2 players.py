@@ -1,0 +1,109 @@
+import cv2
+import os
+import numpy as np
+from keras.models import load_model
+from random import choice
+
+
+Class_map = {
+    0: "rock",
+    1:"paper",
+    2:"scissors",
+    3:"none"
+    }
+
+def mapper(val):
+    return Class_map[val]
+
+
+def get_winner(user_move, comp_move):
+    if(user_move == comp_move):
+        return "Tie"
+
+    if(user_move == "rock"):
+        if(comp_move == "paper"):
+            return "Player 2"
+        if(comp_move == "scissors"):
+            return "Player 1"
+
+    if(user_move == "paper"):
+        if(comp_move == "rock"):
+            return "Player 1"
+        if(comp_move == "scissors"):
+            return "Player 2"
+
+    if(user_move == "scissors"):
+        if(comp_move == "paper"):
+            return "Player 1"
+        if(comp_move == "rock"):
+            return "Player 2"
+    
+    
+    
+
+
+model = load_model("rock_paper_scissors_model.h5")
+
+cap = cv2.VideoCapture(0)
+cap.set(3, 3000)
+cap.set(4, 3000)
+
+prev_move_name = None
+prev_move_name2 = None
+
+while(True):
+    ret, frame = cap.read()
+    frame = cv2.flip(frame, 1)
+
+    if(ret == False):
+        continue
+    font = cv2.FONT_HERSHEY_COMPLEX
+    cv2.putText(frame, "Player 1 move here --> ",(100, 80), font, 0.7, (0, 255, 255), 3, cv2.LINE_AA)
+    cv2.putText(frame, "Player 2 move here --> ", (800, 80), font, 0.7, (0, 255, 255), 3, cv2.LINE_AA)
+    cv2.rectangle(frame, (100, 100), (500, 500), (255, 255, 255), 1)
+    cv2.rectangle(frame, (800, 100), (1200, 500), (255, 255, 255), 1)
+
+    roi = frame[100:500, 100:500]
+    img = cv2.cvtColor(roi, cv2.COLOR_BGR2RGB)
+    img = cv2.resize(img, (227, 227))
+
+    pred = model.predict(np.array([img]))
+    img_code = np.argmax(pred[0])
+    img_move_name = mapper(img_code)
+
+    
+
+    roi2 = frame[100: 500, 800:1200]
+    img2 = cv2.cvtColor(roi2, cv2.COLOR_BGR2RGB)
+    img2 = cv2.resize(img2, (227, 227))
+
+    pred2 = model.predict(np.array([img2]))
+    img2_code = np.argmax(pred2[0])
+    img2_move_name = mapper(img2_code)
+
+    if(prev_move_name != img_move_name or prev_move_name2 != img2_move_name):
+        if(img_move_name !="none" and img2_move_name != "none"):
+            winner = get_winner(img_move_name, img2_move_name)
+
+        else:
+            winner = "Waiting..."
+
+    prev_move_name = img_move_name
+    prev_move_name2 = img2_move_name
+
+
+    cv2.putText(frame, "Winner is : "+winner, (400, 600), font, 2,(0, 255, 255), 1, cv2.LINE_AA)
+
+    
+    cv2.imshow("Game", frame)
+    
+    k = cv2.waitKey(1)&0xFF
+    if(k==ord('q')):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
+    
+
+
+
